@@ -1,0 +1,360 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Periodic Table (HTML)</title>
+  <style>
+    :root {
+      --bg: #0f1220;
+      --card: #161a2b;
+      --text: #e7e9f0;
+      --muted: #9aa3b2;
+      --accent: #8ab4f8;
+
+      /* category colors */
+      --alkali: #ff6b6b;
+      --alkaline: #ffa94d;
+      --transition: #ffd43b;
+      --post: #94d82d;
+      --metalloid: #4dd4c6;
+      --nonmetal: #74c0fc;
+      --halogen: #b197fc;
+      --noble: #f783ac;
+      --lanth: #20c997;
+      --act: #51cf66;
+      --unknown: #868e96;
+    }
+
+    * { box-sizing: border-box; }
+    body {
+      margin: 0; font-family: system-ui, -apple-system, Segoe UI, Roboto, Ubuntu, Cantarell, Noto Sans, Helvetica, Arial, "Apple Color Emoji", "Segoe UI Emoji";
+      background: radial-gradient(1200px 800px at 10% 0%, #151936, #0f1220 60%);
+      color: var(--text);
+    }
+
+    .wrap { max-width: 1200px; margin: 32px auto; padding: 16px; }
+
+    header { display:flex; gap:16px; align-items:center; justify-content:space-between; flex-wrap:wrap; }
+    h1 { margin:0; font-size: clamp(22px, 3.5vw, 36px); letter-spacing: .5px; }
+    .controls { display:flex; gap:12px; align-items:center; }
+    input[type="search"]{
+      background: var(--card); border: 1px solid #222743; color: var(--text); padding: 10px 12px; border-radius: 12px; min-width: 240px; outline: none;
+    }
+    .legend { display:flex; gap:10px; flex-wrap:wrap; }
+    .badge { display:inline-flex; align-items:center; gap:8px; font-size:12px; color:var(--muted); background: #1a1f35; padding:6px 10px; border-radius:999px; border:1px solid #202748; }
+    .dot { width:10px; height:10px; border-radius:50%; display:inline-block; }
+
+    .grid { margin-top: 18px; display:grid; grid-template-columns: repeat(18, minmax(40px, 1fr)); gap: 8px; }
+
+    .cell { position:relative; background: var(--card); border:1px solid #202748; border-radius: 12px; padding: 8px; min-height: 60px; display:grid; grid-template-rows: auto 1fr auto; cursor: pointer; transition: transform .08s ease, box-shadow .2s ease, border-color .2s ease; }
+    .cell:hover { transform: translateY(-2px); box-shadow: 0 6px 20px rgba(0,0,0,.35); border-color:#2a3160; }
+
+    .num { font-size: 10px; color: var(--muted); }
+    .sym { font-size: clamp(14px, 2.3vw, 20px); font-weight: 700; line-height: 1; }
+    .name { font-size: 10px; color: var(--muted); text-overflow: ellipsis; white-space: nowrap; overflow: hidden; }
+
+    .empty { background: transparent; border: none; pointer-events:none; }
+
+    /* category tints */
+    .alkali     { box-shadow: inset 0 0 0 2px color-mix(in oklab, var(--alkali) 60%, transparent); }
+    .alkaline   { box-shadow: inset 0 0 0 2px color-mix(in oklab, var(--alkaline) 60%, transparent); }
+    .transition { box-shadow: inset 0 0 0 2px color-mix(in oklab, var(--transition) 60%, transparent); }
+    .post       { box-shadow: inset 0 0 0 2px color-mix(in oklab, var(--post) 60%, transparent); }
+    .metalloid  { box-shadow: inset 0 0 0 2px color-mix(in oklab, var(--metalloid) 60%, transparent); }
+    .nonmetal   { box-shadow: inset 0 0 0 2px color-mix(in oklab, var(--nonmetal) 60%, transparent); }
+    .halogen    { box-shadow: inset 0 0 0 2px color-mix(in oklab, var(--halogen) 60%, transparent); }
+    .noble      { box-shadow: inset 0 0 0 2px color-mix(in oklab, var(--noble) 60%, transparent); }
+    .lanth      { box-shadow: inset 0 0 0 2px color-mix(in oklab, var(--lanth) 60%, transparent); }
+    .act        { box-shadow: inset 0 0 0 2px color-mix(in oklab, var(--act) 60%, transparent); }
+    .unknown    { box-shadow: inset 0 0 0 2px color-mix(in oklab, var(--unknown) 60%, transparent); }
+
+    /* details panel */
+    .panel {
+      position: fixed; inset: auto 0 0 0; background: rgba(5,7,15,.6); backdrop-filter: blur(6px);
+      translate: 0 100%; transition: translate .25s ease; z-index: 50;
+    }
+    .panel.open { translate: 0 0; }
+    .panel .inner { max-width: 900px; margin: 0 auto; padding: 16px; display:flex; gap:16px; align-items:flex-start; }
+    .panel .card { background: var(--card); border:1px solid #202748; border-radius: 16px; padding: 16px; flex:1; }
+    .close { background:transparent; border:1px solid #2a3160; color:var(--text); padding:10px 12px; border-radius:12px; cursor:pointer; }
+
+    footer { color: var(--muted); font-size: 12px; margin-top: 18px; text-align:center; }
+
+    @media (max-width: 720px) {
+      .grid { grid-template-columns: repeat(9, 1fr); }
+    }
+  </style>
+</head>
+<body>
+  <div class="wrap">
+    <header>
+      <h1>Interactive Periodic Table</h1>
+      <div class="controls">
+        <input id="search" type="search" placeholder="Search by symbol or name…" />
+      </div>
+    </header>
+
+    <div class="legend" aria-hidden="true">
+      <span class="badge"><span class="dot" style="background:var(--alkali)"></span> Alkali metal</span>
+      <span class="badge"><span class="dot" style="background:var(--alkaline)"></span> Alkaline earth</span>
+      <span class="badge"><span class="dot" style="background:var(--transition)"></span> Transition metal</span>
+      <span class="badge"><span class="dot" style="background:var(--post)"></span> Post-transition</span>
+      <span class="badge"><span class="dot" style="background:var(--metalloid)"></span> Metalloid</span>
+      <span class="badge"><span class="dot" style="background:var(--nonmetal)"></span> Nonmetal</span>
+      <span class="badge"><span class="dot" style="background:var(--halogen)"></span> Halogen</span>
+      <span class="badge"><span class="dot" style="background:var(--noble)"></span> Noble gas</span>
+      <span class="badge"><span class="dot" style="background:var(--lanth)"></span> Lanthanide</span>
+      <span class="badge"><span class="dot" style="background:var(--act)"></span> Actinide</span>
+    </div>
+
+    <!-- Main 18-column grid -->
+    <div id="table" class="grid" role="grid" aria-label="Periodic Table"></div>
+
+    <footer>Tip: Click an element for details. Type to filter.</footer>
+  </div>
+
+  <!-- Bottom details panel -->
+  <div id="panel" class="panel" role="dialog" aria-modal="true" aria-labelledby="p-title" aria-hidden="true">
+    <div class="inner">
+      <div class="card" id="p-card">
+        <h2 id="p-title" style="margin-top:0;">—</h2>
+        <div id="p-body" style="color:var(--muted)">Select an element to see details.</div>
+      </div>
+      <button class="close" id="p-close">Close</button>
+    </div>
+  </div>
+
+  <script>
+    // Minimal dataset with positioning (group, period) for all 118 elements
+    // and lightweight details. Categories are simplified for coloring.
+    const E = [
+      // n, sym, name, group (1-18), period (1-7, or 8/9 for f-block rows), category
+      [1, 'H',  'Hydrogen',            1, 1, 'nonmetal'],
+      [2, 'He', 'Helium',             18, 1, 'noble'],
+      [3, 'Li', 'Lithium',             1, 2, 'alkali'],
+      [4, 'Be', 'Beryllium',           2, 2, 'alkaline'],
+      [5, 'B',  'Boron',              13, 2, 'metalloid'],
+      [6, 'C',  'Carbon',             14, 2, 'nonmetal'],
+      [7, 'N',  'Nitrogen',           15, 2, 'nonmetal'],
+      [8, 'O',  'Oxygen',             16, 2, 'nonmetal'],
+      [9, 'F',  'Fluorine',           17, 2, 'halogen'],
+      [10,'Ne', 'Neon',               18, 2, 'noble'],
+      [11,'Na', 'Sodium',              1, 3, 'alkali'],
+      [12,'Mg', 'Magnesium',           2, 3, 'alkaline'],
+      [13,'Al', 'Aluminium',          13, 3, 'post'],
+      [14,'Si', 'Silicon',            14, 3, 'metalloid'],
+      [15,'P',  'Phosphorus',         15, 3, 'nonmetal'],
+      [16,'S',  'Sulfur',             16, 3, 'nonmetal'],
+      [17,'Cl', 'Chlorine',           17, 3, 'halogen'],
+      [18,'Ar', 'Argon',              18, 3, 'noble'],
+      [19,'K',  'Potassium',           1, 4, 'alkali'],
+      [20,'Ca', 'Calcium',             2, 4, 'alkaline'],
+      [21,'Sc', 'Scandium',            3, 4, 'transition'],
+      [22,'Ti', 'Titanium',            4, 4, 'transition'],
+      [23,'V',  'Vanadium',            5, 4, 'transition'],
+      [24,'Cr', 'Chromium',            6, 4, 'transition'],
+      [25,'Mn', 'Manganese',           7, 4, 'transition'],
+      [26,'Fe', 'Iron',                8, 4, 'transition'],
+      [27,'Co', 'Cobalt',              9, 4, 'transition'],
+      [28,'Ni', 'Nickel',             10, 4, 'transition'],
+      [29,'Cu', 'Copper',             11, 4, 'transition'],
+      [30,'Zn', 'Zinc',               12, 4, 'transition'],
+      [31,'Ga', 'Gallium',            13, 4, 'post'],
+      [32,'Ge', 'Germanium',          14, 4, 'metalloid'],
+      [33,'As', 'Arsenic',            15, 4, 'metalloid'],
+      [34,'Se', 'Selenium',           16, 4, 'nonmetal'],
+      [35,'Br', 'Bromine',            17, 4, 'halogen'],
+      [36,'Kr', 'Krypton',            18, 4, 'noble'],
+      [37,'Rb', 'Rubidium',            1, 5, 'alkali'],
+      [38,'Sr', 'Strontium',           2, 5, 'alkaline'],
+      [39,'Y',  'Yttrium',             3, 5, 'transition'],
+      [40,'Zr', 'Zirconium',           4, 5, 'transition'],
+      [41,'Nb', 'Niobium',             5, 5, 'transition'],
+      [42,'Mo', 'Molybdenum',          6, 5, 'transition'],
+      [43,'Tc', 'Technetium',          7, 5, 'transition'],
+      [44,'Ru', 'Ruthenium',           8, 5, 'transition'],
+      [45,'Rh', 'Rhodium',             9, 5, 'transition'],
+      [46,'Pd', 'Palladium',          10, 5, 'transition'],
+      [47,'Ag', 'Silver',             11, 5, 'transition'],
+      [48,'Cd', 'Cadmium',            12, 5, 'transition'],
+      [49,'In', 'Indium',             13, 5, 'post'],
+      [50,'Sn', 'Tin',                14, 5, 'post'],
+      [51,'Sb', 'Antimony',           15, 5, 'metalloid'],
+      [52,'Te', 'Tellurium',          16, 5, 'metalloid'],
+      [53,'I',  'Iodine',             17, 5, 'halogen'],
+      [54,'Xe', 'Xenon',              18, 5, 'noble'],
+      [55,'Cs', 'Caesium',             1, 6, 'alkali'],
+      [56,'Ba', 'Barium',              2, 6, 'alkaline'],
+      [57,'La', 'Lanthanum',           3, 8, 'lanth'], // shown in f-block row
+      [58,'Ce', 'Cerium',              4, 8, 'lanth'],
+      [59,'Pr', 'Praseodymium',        5, 8, 'lanth'],
+      [60,'Nd', 'Neodymium',           6, 8, 'lanth'],
+      [61,'Pm', 'Promethium',          7, 8, 'lanth'],
+      [62,'Sm', 'Samarium',            8, 8, 'lanth'],
+      [63,'Eu', 'Europium',            9, 8, 'lanth'],
+      [64,'Gd', 'Gadolinium',         10, 8, 'lanth'],
+      [65,'Tb', 'Terbium',            11, 8, 'lanth'],
+      [66,'Dy', 'Dysprosium',         12, 8, 'lanth'],
+      [67,'Ho', 'Holmium',            13, 8, 'lanth'],
+      [68,'Er', 'Erbium',             14, 8, 'lanth'],
+      [69,'Tm', 'Thulium',            15, 8, 'lanth'],
+      [70,'Yb', 'Ytterbium',          16, 8, 'lanth'],
+      [71,'Lu', 'Lutetium',           17, 8, 'lanth'],
+      [72,'Hf', 'Hafnium',             4, 6, 'transition'],
+      [73,'Ta', 'Tantalum',            5, 6, 'transition'],
+      [74,'W',  'Tungsten',            6, 6, 'transition'],
+      [75,'Re', 'Rhenium',             7, 6, 'transition'],
+      [76,'Os', 'Osmium',              8, 6, 'transition'],
+      [77,'Ir', 'Iridium',             9, 6, 'transition'],
+      [78,'Pt', 'Platinum',           10, 6, 'transition'],
+      [79,'Au', 'Gold',               11, 6, 'transition'],
+      [80,'Hg', 'Mercury',            12, 6, 'transition'],
+      [81,'Tl', 'Thallium',           13, 6, 'post'],
+      [82,'Pb', 'Lead',               14, 6, 'post'],
+      [83,'Bi', 'Bismuth',            15, 6, 'post'],
+      [84,'Po', 'Polonium',           16, 6, 'post'],
+      [85,'At', 'Astatine',           17, 6, 'halogen'],
+      [86,'Rn', 'Radon',              18, 6, 'noble'],
+      [87,'Fr', 'Francium',            1, 7, 'alkali'],
+      [88,'Ra', 'Radium',              2, 7, 'alkaline'],
+      [89,'Ac', 'Actinium',            3, 9, 'act'], // shown in f-block row
+      [90,'Th', 'Thorium',             4, 9, 'act'],
+      [91,'Pa', 'Protactinium',        5, 9, 'act'],
+      [92,'U',  'Uranium',             6, 9, 'act'],
+      [93,'Np', 'Neptunium',           7, 9, 'act'],
+      [94,'Pu', 'Plutonium',           8, 9, 'act'],
+      [95,'Am', 'Americium',           9, 9, 'act'],
+      [96,'Cm', 'Curium',             10, 9, 'act'],
+      [97,'Bk', 'Berkelium',          11, 9, 'act'],
+      [98,'Cf', 'Californium',        12, 9, 'act'],
+      [99,'Es', 'Einsteinium',        13, 9, 'act'],
+      [100,'Fm','Fermium',            14, 9, 'act'],
+      [101,'Md','Mendelevium',        15, 9, 'act'],
+      [102,'No','Nobelium',           16, 9, 'act'],
+      [103,'Lr','Lawrencium',         17, 9, 'act'],
+      [104,'Rf','Rutherfordium',       4, 7, 'transition'],
+      [105,'Db','Dubnium',             5, 7, 'transition'],
+      [106,'Sg','Seaborgium',          6, 7, 'transition'],
+      [107,'Bh','Bohrium',             7, 7, 'transition'],
+      [108,'Hs','Hassium',             8, 7, 'transition'],
+      [109,'Mt','Meitnerium',          9, 7, 'transition'],
+      [110,'Ds','Darmstadtium',       10, 7, 'transition'],
+      [111,'Rg','Roentgenium',        11, 7, 'transition'],
+      [112,'Cn','Copernicium',        12, 7, 'transition'],
+      [113,'Nh','Nihonium',           13, 7, 'post'],
+      [114,'Fl','Flerovium',          14, 7, 'post'],
+      [115,'Mc','Moscovium',          15, 7, 'post'],
+      [116,'Lv','Livermorium',        16, 7, 'post'],
+      [117,'Ts','Tennessine',         17, 7, 'halogen'],
+      [118,'Og','Oganesson',          18, 7, 'noble'],
+    ];
+
+    // Build a mapping: key `${group}-${periodRow}` -> element
+    // For f-block, we render separately below the main grid.
+    const main = E.filter(x => x[4] <= 7);           // periods 1-7
+    const fLan = E.filter(x => x[4] === 8);          // lanthanides row
+    const fAct = E.filter(x => x[4] === 9);          // actinides row
+
+    const table = document.getElementById('table');
+
+    // Render helper to create an empty spacer cell
+    const spacer = () => {
+      const d = document.createElement('div');
+      d.className = 'cell empty';
+      d.setAttribute('aria-hidden','true');
+      return d;
+    };
+
+    // Precompute a 7x18 matrix for main grid
+    const matrix = Array.from({length:7}, () => Array(18).fill(null));
+    for (const [n, sym, name, g, p, cat] of main) {
+      matrix[p-1][g-1] = { n, sym, name, cat };
+    }
+
+    function createCell(el){
+      if(!el){ return spacer(); }
+      const d = document.createElement('button');
+      d.className = `cell ${el.cat}`;
+      d.setAttribute('role','gridcell');
+      d.setAttribute('aria-label', `${el.name}, atomic number ${el.n}`);
+      d.innerHTML = `
+        <div class="num">${el.n}</div>
+        <div class="sym">${el.sym}</div>
+        <div class="name">${el.name}</div>
+      `;
+      d.addEventListener('click', () => openPanel(el));
+      return d;
+    }
+
+    // Render main grid rows 1..7
+    for (let r=0; r<7; r++) {
+      for (let c=0; c<18; c++) {
+        table.appendChild(createCell(matrix[r][c]));
+      }
+    }
+
+    // Add a full-width spacer row
+    for(let i=0;i<18;i++) table.appendChild(spacer());
+
+    // Render Lanthanides label + 15 cells starting from column 3
+    const lanRow = Array(18).fill(null);
+    for (const e of fLan) lanRow[e[3]-1] = { n:e[0], sym:e[1], name:e[2], cat:e[5] };
+    // place label in col 1-2
+    const label = document.createElement('div');
+    label.className = 'cell';
+    label.style.gridColumn = 'span 2';
+    label.innerHTML = '<div class="sym">Lanthanides</div><div class="name">57–71</div>';
+    table.appendChild(label);
+    for (let c=2; c<18; c++) table.appendChild(createCell(lanRow[c]));
+
+    // Render Actinides label + 15 cells starting from column 3
+    const actRow = Array(18).fill(null);
+    for (const e of fAct) actRow[e[3]-1] = { n:e[0], sym:e[1], name:e[2], cat:e[5] };
+    const label2 = document.createElement('div');
+    label2.className = 'cell';
+    label2.style.gridColumn = 'span 2';
+    label2.innerHTML = '<div class="sym">Actinides</div><div class="name">89–103</div>';
+    table.appendChild(label2);
+    for (let c=2; c<18; c++) table.appendChild(createCell(actRow[c]));
+
+    // Search filter
+    const q = document.getElementById('search');
+    q.addEventListener('input', () => {
+      const term = q.value.trim().toLowerCase();
+      const cells = document.querySelectorAll('#table .cell');
+      cells.forEach((cell) => {
+        if (cell.classList.contains('empty')) return;
+        const label = cell.getAttribute('aria-label') || '';
+        cell.style.outline = '';
+        if (!term) { cell.style.opacity = 1; return; }
+        const hit = label.toLowerCase().includes(term);
+        cell.style.opacity = hit ? 1 : 0.25;
+        if (hit) cell.style.outline = '2px solid var(--accent)';
+      });
+    });
+
+    // Details panel logic
+    const panel = document.getElementById('panel');
+    const pTitle = document.getElementById('p-title');
+    const pBody = document.getElementById('p-body');
+    document.getElementById('p-close').addEventListener('click', closePanel);
+    panel.addEventListener('click', (e)=>{ if(e.target===panel) closePanel(); });
+
+    function openPanel(el){
+      pTitle.textContent = `${el.sym} — ${el.name}`;
+      pBody.innerHTML = `
+        <div style="display:grid; grid-template-columns: repeat(3, minmax(100px,1fr)); gap: 12px;">
+          <div><div class="num">Atomic Number</div><div style="font-size:20px;font-weight:700">${el.n}</div></div>
+          <div><div class="num">Category</div><div style="font-size:20px;font-weight:700; text-transform:capitalize">${el.cat}</div></div>
+          <div><div class="num">Symbol</div><div style="font-size:20px;font-weight:700">${el.sym}</div></div>
+        </div>
+        <p style="margin-top:12px; color:var(--muted)">This minimal demo includes core info. You can extend it with atomic mass, electron configuration, etc.</p>
+      `;
+      panel.classList.add('open');
+      panel.setAttribute('aria-hidden','false');
+    }
+    function closePanel(){ panel.classList.remove('open'); panel.setAttribute('aria-hidden','true'); }
+  </script>
+</body>
+</html>
